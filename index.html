@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiMo · Downloader Panel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --accent-1: #6366f1;
+    --accent-2: #8b5cf6;
+    --accent-3: #ec4899;
+    --success: #10b981;
+    --error: #ef4444;
+    --warn: #f59e0b;
+    --bg-1: #0a0e1a;
+    --bg-2: #131829;
+    --bg-card: rgba(26, 32, 53, 0.6);
+    --border: rgba(148, 163, 184, 0.15);
+    --text-1: #f1f5f9;
+    --text-2: #94a3b8;
+    --text-3: #64748b;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    background: radial-gradient(ellipse at top, #1e1b4b 0%, #0a0e1a 45%, #000 100%);
+    color: var(--text-1);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+    animation: floatOrb 22s ease-in-out infinite;
+  }
+  .orb-1 { width: 420px; height: 420px; background: #6366f1; top: -120px; left: -120px; }
+  .orb-2 { width: 520px; height: 520px; background: #ec4899; bottom: -220px; right: -200px; animation-delay: -6s; }
+  .orb-3 { width: 340px; height: 340px; background: #8b5cf6; top: 55%; left: 45%; animation-delay: -12s; }
+
+  @keyframes floatOrb {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(60px,-60px) scale(1.12); }
+    66% { transform: translate(-50px,50px) scale(0.92); }
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: rgba(10, 14, 26, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo { display: flex; align-items: center; gap: 12px; }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 22px;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+    box-shadow: 0 8px 28px rgba(139, 92, 246, 0.45);
+    animation: pulseGlow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%,100% { box-shadow: 0 8px 28px rgba(139,92,246,0.45); }
+    50%     { box-shadow: 0 8px 44px rgba(236,72,153,0.6); }
+  }
+
+  .logo h1 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    background: linear-gradient(135deg, #fff, #c7d2fe);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo span {
+    display: block;
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 600;
+  }
+
+  .history-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .history-btn:hover {
+    background: rgba(99, 102, 241, 0.18);
+    border-color: rgba(99, 102, 241, 0.5);
+    transform: translateY(-1px);
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 48px 24px 100px;
+    animation: fadeInUp 0.7s ease both;
+  }
+
+  .hero { text-align: center; margin-bottom: 36px; }
+  .hero h2 {
+    font-size: clamp(24px, 4vw, 38px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 30%, #a5b4fc 70%, #f0abfc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--text-2);
+    font-size: 14px;
+    letter-spacing: 0.6px;
+  }
+  .hero p strong {
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .platform-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 640px) {
+    .platform-tabs { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .tab .tab-icon { font-size: 22px; transition: transform 0.3s ease; }
+  .tab:hover:not(.disabled) {
+    color: var(--text-1);
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+  }
+  .tab:hover:not(.disabled) .tab-icon { transform: scale(1.15) rotate(-5deg); }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(99,102,241,0.28), rgba(236,72,153,0.18));
+    border-color: rgba(139, 92, 246, 0.65);
+    color: #fff;
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.28);
+  }
+  .tab.active .tab-icon { transform: scale(1.15); }
+  
+  .tab.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .input-card {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    background: var(--bg-card);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    animation: fadeInUp 0.7s 0.1s ease both;
+    margin-bottom: 28px;
+  }
+  .input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    transition: border-color 0.25s ease;
+  }
+  .input-wrapper:focus-within { border-color: rgba(99, 102, 241, 0.65); }
+  .input-wrapper svg { color: var(--text-3); flex-shrink: 0; }
+
+  #urlInput {
+    flex: 1;
+    padding: 14px 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-1);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  #urlInput::placeholder { color: var(--text-3); }
+
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    cursor: pointer;
+    font-size: 20px;
+    padding: 0 4px;
+    display: none;
+  }
+  .clear-btn.visible { display: block; }
+  .clear-btn:hover { color: var(--text-1); }
+
+  .fetch-btn {
+    padding: 14px 26px;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 22px rgba(139, 92, 246, 0.35);
+    white-space: nowrap;
+  }
+  .fetch-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(236, 72, 153, 0.5);
+  }
+  .fetch-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .fetch-btn.loading .spinner { display: inline-block; }
+  .fetch-btn.loading span.btn-label { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #resultArea { animation: fadeInUp 0.5s ease both; }
+
+  .result-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .result-thumb {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    display: block;
+    background: #000;
+  }
+
+  .result-body { padding: 20px; }
+
+  .result-body h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-1);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: var(--text-2);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .result-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Tabs UI */
+  .format-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .format-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-2);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .format-tab:hover {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.05);
+  }
+  .format-tab.active {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+    color: var(--accent-2);
+  }
+
+  .format-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+  }
+  .format-table-container::-webkit-scrollbar { width: 5px; }
+  .format-table-container::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 3px; }
+
+  .format-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .format-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  .format-row:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+  .format-quality {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .btn-small-download {
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .btn-small-download:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  }
+  .btn-small-download:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  /* Error and Empty states */
+  .empty-state, .error-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-2);
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 18px;
+  }
+  .empty-state .emoji, .error-state .emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+  .error-state { border-color: rgba(239, 68, 68, 0.35); }
+  .error-state .emoji { animation: shake 0.5s ease; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+  /* Drawer */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 90;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; width: 420px; max-width: 100vw; height: 100vh;
+    background: linear-gradient(180deg, #131829, #0a0e1a); border-left: 1px solid var(--border);
+    z-index: 100; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex; flex-direction: column; box-shadow: -20px 0 60px rgba(0,0,0,0.5);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); gap: 10px; }
+  .drawer-tabs { display: flex; gap: 6px; flex: 1; }
+  .drawer-tab {
+    padding: 8px 14px; background: transparent; border: 1px solid transparent; color: var(--text-2);
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .drawer-tab:hover { color: var(--text-1); }
+  .drawer-tab.active { background: rgba(99, 102, 241, 0.18); border-color: rgba(99, 102, 241, 0.45); color: #fff; }
+  
+  .badge {
+    background: var(--accent-3);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .close-btn { width: 34px; height: 34px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border); border-radius: 8px; color: var(--text-1); font-size: 18px; cursor: pointer; display: grid; place-items: center; transition: all 0.2s ease; }
+  .close-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: var(--error); }
+  .drawer-content { flex: 1; overflow-y: auto; padding: 16px; }
+  .drawer-content::-webkit-scrollbar { width: 6px; }
+  .drawer-content::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 3px; }
+  .drawer-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--text-3); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .btn-clear-all { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+  .btn-clear-all:hover { background: rgba(239, 68, 68, 0.3); }
+  
+  .hist-item, .act-item { display: flex; gap: 12px; padding: 12px; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; transition: all 0.2s ease; animation: fadeInUp 0.35s ease both; }
+  .hist-item:hover { background: rgba(30, 41, 59, 0.7); border-color: rgba(99, 102, 241, 0.4); transform: translateX(-2px); }
+  .hist-item.saved { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.05); }
+  
+  .hist-thumb { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; background: #000; flex-shrink: 0; display: grid; place-items: center; font-size: 22px; color: var(--text-2); }
+  .hist-body { flex: 1; min-width: 0; }
+  .hist-title { font-size: 13px; font-weight: 700; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .hist-meta { font-size: 11px; color: var(--text-3); display: flex; gap: 8px; margin-bottom: 6px; }
+  .hist-meta .platform-tag { color: var(--accent-2); font-weight: 700; text-transform: uppercase; }
+  .hist-url { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+  .hist-actions { display: flex; gap: 6px; }
+  
+  .icon-btn { width: 28px; height: 28px; background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border); border-radius: 6px; color: var(--text-2); cursor: pointer; display: grid; place-items: center; font-size: 13px; transition: all 0.2s ease; }
+  .icon-btn:hover { color: var(--text-1); transform: scale(1.08); }
+  .icon-btn.reload:hover { background: rgba(99,102,241,0.3); border-color: var(--accent-1); color: #fff; }
+  .icon-btn.delete:hover { background: rgba(239,68,68,0.3); border-color: var(--error); color: #fff; }
+  .icon-btn.save:hover { background: rgba(245,158,11,0.3); border-color: var(--warn); color: #fff; }
+  .icon-btn.save.active { background: rgba(245,158,11,0.2); color: var(--warn); border-color: var(--warn); }
+
+  .act-item { align-items: flex-start; }
+  .act-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .act-dot.success { background: var(--success); box-shadow: 0 0 12px var(--success); }
+  .act-dot.error { background: var(--error); box-shadow: 0 0 12px var(--error); }
+  .act-dot.info { background: var(--accent-1); box-shadow: 0 0 12px var(--accent-1); }
+  .act-body { flex: 1; }
+  .act-msg { font-size: 13px; color: var(--text-1); font-weight: 600; }
+  .act-time { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .empty-drawer { text-align: center; padding: 60px 20px; color: var(--text-3); font-size: 13px; }
+  .empty-drawer .emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+
+  /* Toast */
+  .toast-container { position: fixed; top: 80px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+  .toast { min-width: 240px; max-width: 340px; padding: 13px 16px; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; background: rgba(30, 41, 59, 0.95); border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0,0,0,0.5); backdrop-filter: blur(12px); animation: toastIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); pointer-events: auto; }
+  .toast.success { border-color: rgba(16, 185, 129, 0.55); }
+  .toast.error { border-color: rgba(239, 68, 68, 0.55); }
+  .toast.info { border-color: rgba(99, 102, 241, 0.55); }
+  .toast.removing { animation: toastOut 0.3s ease forwards; }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateX(30px); } }
+
+  footer { position: relative; z-index: 1; text-align: center; padding: 24px; color: var(--text-3); font-size: 12px; border-top: 1px solid var(--border); }
+  footer strong { color: var(--accent-2); }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 560px) { main { padding: 32px 16px 80px; } .input-card { flex-direction: column; } .fetch-btn { justify-content: center; padding: 14px; } header { padding: 12px 16px; } .logo h1 { font-size: 17px; } }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"><img src="https://ik.imagekit.io/qkqtthays/MM-logo.png?updatedAt=1761059072594" alt="MiMo" style="width: 40px; border-radius: 50%;"/></div>
+    <div>
+      <h1>MiMo</h1>
+      <span>Social Media Downloader</span>
+    </div>
+  </div>
+  <button class="history-btn" onclick="openDrawer()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+    History
+  </button>
+</header>
+
+<main>
+  <section class="hero">
+    <h2>Download from any platform</h2>
+    <p><strong>Fast</strong> • <strong>Lightweight</strong> • <strong>Powerful</strong></p>
+  </section>
+
+  <div class="platform-tabs" id="platformTabs"></div>
+
+  <div class="input-card">
+    <div class="input-wrapper">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <input type="url" id="urlInput" placeholder="Paste your URL here..." autocomplete="off" />
+      <button class="clear-btn" id="clearBtn" title="Clear">×</button>
+    </div>
+    <button class="fetch-btn" id="fetchBtn">
+      <div class="spinner"></div>
+      <span class="btn-label">Fetch</span>
+      <svg class="btn-label" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+
+  <div id="resultArea">
+    <div class="empty-state">
+      <span class="emoji">🎯</span>
+      <div>Paste a link above and hit <strong>Fetch</strong> to get started</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Built with <strong>❤️</strong> by <strong>M. Sarker</strong> · MiMo Downloader Panel
+</footer>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-tab="history">📜 History <span class="badge" id="drawerHistoryCount">0</span></button>
+      <button class="drawer-tab" data-tab="activity">🕒 Activity</button>
+    </div>
+    <button class="close-btn" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-content" id="drawerContent"></div>
+</aside>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ============================================================
+   CONFIG & STATE
+   ============================================================ */
+const API_BASE = 'http://78.154.103.52:10245';
+
+const PLATFORMS = {
+  facebook: { label: 'Facebook',  endpoint: '/facebook',  icon: '<img src="https://ik.imagekit.io/qkqtthays/Facebook_icon.png" alt="Facebook" />', placeholder: 'https://www.facebook.com/watch/?v=...' },
+  instagram: { label: 'Instagram', endpoint: '/Instagram', icon: '<img src="https://ik.imagekit.io/qkqtthays/Instagram-icon.png" alt="Instagram" />', placeholder: 'https://www.instagram.com/reel/...' },
+  pinterest: { label: 'Pinterest', endpoint: '/Pinterest', icon: '<img src="https://ik.imagekit.io/qkqtthays/Pinterest_icon.png" alt="Pinterest" />', placeholder: 'https://www.pinterest.com/pin/...' },
+  tiktok: { label: 'TikTok',  endpoint: '/tiktok',      icon: '<img src="https://ik.imagekit.io/qkqtthays/TikTok_icon.png" alt="TikTok" />', placeholder: 'https://www.tiktok.com/@user/video/...' },
+  youtube: { label: 'YouTube',   endpoint: '/youtube',   icon: '<img src="https://ik.imagekit.io/qkqtthays/Youtube_icon.png" alt="YouTube" />', placeholder: 'https://www.youtube.com/watch?v=...' }
+};
+
+let currentPlatform = 'facebook';
+let history = [];
+let activity = [];
+let drawerTab = 'history';
+let isLoading = false;
+let currentYtTab = 'video';
+
+/* ============================================================
+   JSON CACHE SYSTEM (24H Activity, 3D History)
+   ============================================================ */
+function loadData() {
+  try {
+    const raw = localStorage.getItem('mimo_db_v1');
+    if (raw) {
+      const db = JSON.parse(raw);
+      history = db.history || [];
+      activity = db.activity || [];
+    }
+  } catch (e) { console.error('Data load error', e); }
+
+  const now = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  
+  activity = activity.filter(a => (now - a.timestamp) < DAY_MS);
+  history = history.filter(h => h.isSaved || (now - h.timestamp) < (3 * DAY_MS));
+  
+  saveData();
+}
+
+function saveData() {
+  localStorage.setItem('mimo_db_v1', JSON.stringify({ history, activity }));
+  updateCounts();
+}
+
+function updateCounts() {
+  const el = document.getElementById('drawerHistoryCount');
+  if (el) el.textContent = history.length;
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function escapeHtml(s) { if (s === null || s === undefined) return ''; return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function formatDuration(sec) { if (!sec || isNaN(sec)) return 'N/A'; const s = Math.floor(sec % 60); const m = Math.floor((sec / 60) % 60); const h = Math.floor(sec / 3600); if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; return `${m}:${String(s).padStart(2,'0')}`; }
+function timeAgo(ts) { const diff = Math.floor((Date.now() - ts) / 1000); if (diff < 60) return 'just now'; if (diff < 3600) return Math.floor(diff / 60) + 'm ago'; if (diff < 86400) return Math.floor(diff / 3600) + 'h ago'; return Math.floor(diff / 86400) + 'd ago'; }
+function detectPlatform(url) { 
+  if (!url) return null; 
+  if (/facebook\.com|fb\.watch|fb\.me/i.test(url)) return 'facebook'; 
+  if (/instagram\.com|instagr\.am/i.test(url)) return 'instagram'; 
+  if (/tiktok\.com/i.test(url)) return 'tiktok';
+  if (/pinterest\.com|pin\.it/i.test(url)) return 'pinterest'; 
+  if (/youtube\.com|youtu\.be/i.test(url)) return 'youtube'; 
+  return null; 
+}
+
+function showToast(message, type = 'info', duration = 3200) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  toast.innerHTML = `<span>${icon}</span><span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 320); }, duration);
+}
+
+/* ============================================================
+   DOWNLOAD LOGIC
+   ============================================================ */
+async function startDownload(url, filename, btnElement) {
+  if (!url) return;
+  
+  let originalHtml = '';
+  if (btnElement) {
+    originalHtml = btnElement.innerHTML;
+    btnElement.innerHTML = `<div class="spinner" style="display:inline-block; width:12px; height:12px; border-width:2px; margin-right:6px;"></div> Wait...`;
+    btnElement.disabled = true;
+  }
+
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error('CORS blocked');
+    
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'download.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(blobUrl);
+    
+    showToast('Download started!', 'success');
+  } catch (error) {
+    console.warn('Blob blocked, fallback to new tab', error);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Opened in new tab. Save manually.', 'info', 4000);
+  } finally {
+    if (btnElement) {
+      setTimeout(() => { btnElement.innerHTML = originalHtml; btnElement.disabled = false; }, 1000);
+    }
+  }
+}
+
+/* ============================================================
+   PLATFORM TABS
+   ============================================================ */
+function renderTabs() {
+  const wrap = document.getElementById('platformTabs');
+  const hasInput = document.getElementById('urlInput').value.trim().length > 0;
+  
+  wrap.innerHTML = Object.entries(PLATFORMS).map(([key, p]) => {
+    const isActive = key === currentPlatform;
+    const isDisabled = hasInput && !isActive; 
+    
+    return `
+      <div class="tab ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}" data-platform="${key}">
+        <div class="tab-icon">${p.icon}</div>
+        <div>${p.label}</div>
+      </div>
+    `;
+  }).join('');
+
+  wrap.querySelectorAll('.tab').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.platform === currentPlatform) return;
+      if (document.getElementById('urlInput').value.trim() !== '') {
+        showToast('Clear the URL to switch platforms', 'error');
+        return;
+      }
+      currentPlatform = el.dataset.platform;
+      renderTabs();
+      document.getElementById('urlInput').placeholder = PLATFORMS[currentPlatform].placeholder;
+      document.getElementById('urlInput').focus();
+    });
+  });
+}
+
+function updateTabLock() {
+  const hasInput = document.getElementById('urlInput').value.trim().length > 0;
+  document.querySelectorAll('.tab').forEach(tab => {
+    if (tab.dataset.platform === currentPlatform) {
+      tab.classList.remove('disabled');
+    } else {
+      tab.classList.toggle('disabled', hasInput);
+    }
+  });
+}
+
+/* ============================================================
+   RESULT RENDERERS (Unchanged)
+   ============================================================ */
+function renderStandardResult(title, author, duration, thumbnail, formats, platform, defaultExt = 'mp4') {
+  const formatRows = formats.map((f, idx) => `
+    <div class="format-row">
+      <span class="format-quality">${escapeHtml(f.quality)}${f.ext ? ' · ' + escapeHtml(f.ext) : ''}</span>
+      <button onclick="startDownload('${escapeHtml(f.url)}', '${escapeHtml(title).replace(/'/g, "\\'")}_${idx}.${f.ext || defaultExt}', this)" class="btn-small-download">⬇ Download</button>
+    </div>
+  `).join('');
+
+  const iconUrl = PLATFORMS[platform]?.icon.match(/src="([^"]+)"/)?.[1] || '';
+
+  return `
+    <div class="result-card">
+      ${thumbnail ? `
+        <div style="position: relative; width: 100%; height: 280px; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <img src="${escapeHtml(thumbnail)}" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0;" onerror="this.src='${iconUrl}'; this.style.objectFit='contain'; this.style.padding='40px'; this.style.opacity='0.5';">
+        </div>
+      ` : ''}
+      <div class="result-body">
+        <h3>${escapeHtml(title)}</h3>
+        <div class="result-meta">
+          ${author ? `<span>👤 ${escapeHtml(author)}</span>` : ''}
+          ${duration ? `<span>⏱ ${escapeHtml(duration)}</span>` : ''}
+          <span>🎞 ${formats.length} format${formats.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="format-table-container">
+          <div class="format-header"><span>QUALITY</span><span>ACTION</span></div>
+          ${formatRows}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFacebook(data) {
+  const v = data.video || {};
+  const formats = [];
+  if (v.hd && v.hd !== 'Not available') formats.push({ quality: 'HD 1080p', ext: 'mp4', url: v.hd });
+  if (v.sd && v.sd !== 'Not available') formats.push({ quality: 'SD 480p', ext: 'mp4', url: v.sd });
+  return renderStandardResult(v.title || 'Facebook Video', v.author, v.duration, v.thumbnail, formats, 'facebook');
+}
+
+function renderInstagram(data) {
+  const items = Array.isArray(data) ? data : [data];
+  return items.map(item => {
+    const formats = [{ quality: item.Quality || 'Original', ext: 'mp4', url: item['Download Link'] }];
+    return renderStandardResult(item.Title || 'Instagram Media', item.Author || '', '', item.Thumbnail || '', formats, 'instagram');
+  }).join('');
+}
+
+function renderTiktok(data) {
+  const formats = [];
+  if (data.video && Array.isArray(data.video)) {
+      data.video.forEach(v => formats.push({ quality: v.quality, ext: v.ext, url: v.url }));
+  }
+  return renderStandardResult(data.title || 'TikTok Video', data.author, '', data.thumbnail, formats, 'tiktok');
+}
+
+function renderPinterest(data) {
+  const formats = [];
+  let thumbnail = '';
+  if (data.video) formats.push({ quality: 'Video (MP4)', ext: 'mp4', url: data.video });
+  if (data.photo) {
+    formats.push({ quality: 'Photo (JPG)', ext: 'jpg', url: data.photo });
+    thumbnail = data.photo; 
+  }
+  return renderStandardResult('Pinterest Media', '', '', thumbnail, formats, 'pinterest');
+}
+
+function renderYouTube(data, activeTab = 'video') {
+  const formats = Array.isArray(data.video) ? data.video : [];
+  const standardVideo = [];
+  const otherVideo = [];
+  const audio = [];
+  const ytIcon = PLATFORMS['youtube']?.icon.match(/src="([^"]+)"/)?.[1] || '';
+
+  formats.forEach(f => {
+    const isAudio = f.vcodec === 'none';
+    const q = (f.quality || '').toLowerCase();
+    if (isAudio) audio.push(f);
+    else if (['2160', '1440', '1080', '720', '480', '360', '240', '144'].some(res => q.includes(res)) && !q.includes('x')) standardVideo.push(f);
+    else otherVideo.push(f);
+  });
+
+  standardVideo.sort((a,b) => parseInt(b.quality) - parseInt(a.quality));
+  const groups = { video: standardVideo, moreVideo: otherVideo, audio: audio };
+  const items = groups[activeTab] || [];
+
+  const renderRows = (items) => items.map((item, idx) => `
+    <div class="format-row">
+      <span class="format-quality">${escapeHtml(item.quality)}${item.ext ? ' · ' + escapeHtml(item.ext) : ''}</span>
+      <button onclick="startDownload('${escapeHtml(item.url)}', '${escapeHtml(data.title).replace(/'/g, "\\'")}_${idx}.${item.ext || 'mp4'}', this)" class="btn-small-download">⬇ Download</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="result-card">
+      ${data.thumbnail ? `<img src="${escapeHtml(data.thumbnail)}" referrerpolicy="no-referrer" class="result-thumb" onerror="this.src='${ytIcon}'; this.style.objectFit='contain'; this.style.padding='40px'; this.style.opacity='0.5';">` : ''}
+      <div class="result-body">
+        <h3>${escapeHtml(data.title || 'YouTube Video')}</h3>
+        <div class="result-meta">
+          <span>👤 ${escapeHtml(data.author || 'Unknown')}</span>
+          <span>⏱ ${formatDuration(data.duration)}</span>
+          <span>🎞 ${formats.length} formats</span>
+        </div>
+        <div class="format-tabs">
+          <button class="format-tab ${activeTab === 'video' ? 'active' : ''}" onclick="switchYtTab('video')">Video</button>
+          <button class="format-tab ${activeTab === 'moreVideo' ? 'active' : ''}" onclick="switchYtTab('moreVideo')">More Video</button>
+          <button class="format-tab ${activeTab === 'audio' ? 'active' : ''}" onclick="switchYtTab('audio')">Audio</button>
+        </div>
+        <div class="format-table-container">
+          <div class="format-header"><span>QUALITY</span><span>ACTION</span></div>
+          ${items.length ? renderRows(items) : '<div style="text-align:center; padding:20px; color:var(--text-3)">No formats available</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+let cachedYouTubeData = null;
+function switchYtTab(tab) {
+  if (!cachedYouTubeData) return;
+  currentYtTab = tab;
+  document.getElementById('resultArea').innerHTML = renderYouTube(cachedYouTubeData, tab);
+}
+
+function renderResult(data, platform) {
+  const area = document.getElementById('resultArea');
+  let html = '';
+  try {
+    if (platform === 'facebook')        html = renderFacebook(data);
+    else if (platform === 'instagram')  html = renderInstagram(data);
+    else if (platform === 'tiktok')     html = renderTiktok(data);
+    else if (platform === 'pinterest')  html = renderPinterest(data);
+    else if (platform === 'youtube') {
+      cachedYouTubeData = data; currentYtTab = 'video';
+      html = renderYouTube(data, 'video');
+    }
+    else html = `<pre style="color:#94a3b8;font-size:12px;overflow:auto">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+  } catch (e) { html = `<div class="error-state"><span class="emoji">💥</span>${escapeHtml(e.message)}</div>`; }
+  area.innerHTML = html;
+}
+
+function renderError(msg) {
+  document.getElementById('resultArea').innerHTML = `<div class="error-state"><span class="emoji">⚠️</span><div style="font-weight:700;margin-bottom:6px">Fetch failed</div><div>${escapeHtml(msg || 'Unknown error')}</div></div>`;
+}
+
+/* ============================================================
+   FETCH LOGIC
+   ============================================================ */
+async function fetchMedia() {
+  if (isLoading) return;
+  const input = document.getElementById('urlInput');
+  const url = input.value.trim();
+  if (!url) { showToast('Please paste a URL first', 'error'); input.focus(); return; }
+
+  const platform = PLATFORMS[currentPlatform];
+  const btn = document.getElementById('fetchBtn');
+  isLoading = true;
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  addActivity('info', `Fetching from ${platform.label}...`);
+
+  try {
+    const res = await fetch(`${API_BASE}${platform.endpoint}?video=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    const isError = data && (data.status === 'error' || data.message && !data.video && !data.photo && !data['Download Link'] && !Array.isArray(data) && !data.title && !data.video);
+    if (isError) {
+      renderError(data.message || 'API returned an error');
+      showToast(data.message || 'Fetch failed', 'error');
+      addActivity('error', `${platform.label}: ${data.message || 'Failed'}`);
+    } else {
+      renderResult(data, currentPlatform);
+      showToast(`Fetched from ${platform.label}`, 'success');
+      addActivity('success', `Fetched ${platform.label} media`);
+      addToHistory(currentPlatform, url, data);
+    }
+  } catch (err) {
+    renderError(err.message);
+    showToast(err.message, 'error');
+    addActivity('error', `${platform.label}: ${err.message}`);
+  } finally {
+    isLoading = false;
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+/* ============================================================
+   HISTORY & ACTIVITY
+   ============================================================ */
+function addToHistory(platform, url, data) {
+  if (history[0] && history[0].url === url && history[0].platform === platform) return;
+  const title = (data && (data.Title || (data.video && data.video.title) || data.title)) || `${PLATFORMS[platform].label} media`;
+  
+  const thumb = (data && data.thumbnail) || (data && data.Thumbnail) || (data && data.video && data.video.thumbnail) || (data && data.photo) || '';
+  
+  const item = { 
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), 
+    platform, url, title, thumbnail: thumb, 
+    timestamp: Date.now(), 
+    isSaved: false,
+    data 
+  };
+  
+  history.unshift(item);
+  if (history.length > 100) history = history.slice(0, 100);
+  saveData();
+  if (drawerTab === 'history') renderDrawer();
+}
+
+function toggleSaveHistory(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  item.isSaved = !item.isSaved;
+  saveData();
+  renderDrawer();
+  showToast(item.isSaved ? 'Saved indefinitely!' : 'Removed from saved (expires in 3 days)', item.isSaved ? 'success' : 'info');
+}
+
+function removeHistory(id) {
+  history = history.filter(h => h.id !== id);
+  saveData();
+  renderDrawer();
+  showToast('Removed from history', 'info', 1800);
+}
+
+function clearHistory() {
+  if (!history.length) return;
+  if (!confirm('Clear all download history?')) return;
+  history = [];
+  saveData();
+  renderDrawer();
+  showToast('History cleared', 'info', 1800);
+}
+
+function loadHistoryItem(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  currentPlatform = item.platform;
+  renderTabs();
+  const input = document.getElementById('urlInput');
+  input.value = item.url;
+  input.placeholder = PLATFORMS[currentPlatform].placeholder;
+  updateClearBtn();
+  updateTabLock(); 
+  renderResult(item.data, item.platform);
+  closeDrawer();
+  showToast(`Loaded ${PLATFORMS[item.platform].label} from history`, 'info', 1800);
+  addActivity('info', `Loaded from history: ${PLATFORMS[item.platform].label}`);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function addActivity(type, message) {
+  activity.unshift({ id: Date.now() + Math.random(), type, message, timestamp: Date.now() });
+  if (activity.length > 200) activity = activity.slice(0, 200);
+  saveData();
+  if (drawerTab === 'activity' && drawer.classList.contains('open')) renderDrawer();
+}
+
+/* ============================================================
+   DRAWER
+   ============================================================ */
+const drawer = document.getElementById('drawer');
+const drawerOverlay = document.getElementById('drawerOverlay');
+
+function openDrawer() { drawer.classList.add('open'); drawerOverlay.classList.add('open'); renderDrawer(); document.body.style.overflow = 'hidden'; }
+function closeDrawer() { drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+
+function renderDrawer() {
+  const content = document.getElementById('drawerContent');
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === drawerTab));
+
+  if (drawerTab === 'history') {
+    if (!history.length) {
+      content.innerHTML = `<div class="empty-drawer"><span class="emoji">📭</span>No downloads yet.<br>Your history will appear here.</div>`;
+      return;
+    }
+    content.innerHTML = `
+      <div class="drawer-toolbar">
+        <span>${history.length} item${history.length !== 1 ? 's' : ''}</span>
+        <button class="btn-clear-all" onclick="clearHistory()">Clear all</button>
+      </div>
+      ${history.map(item => {
+        const emojiMap = { facebook: '📘', instagram: '📸', pinterest: '📌', tiktok: '🎵', youtube: '▶️' };
+        const fallbackEmoji = emojiMap[item.platform] || '🔗';
+        
+        const iconUrl = PLATFORMS[item.platform]?.icon.match(/src="([^"]+)"/)?.[1] || '';
+        
+        const thumb = `
+          <div class="hist-thumb" style="position: relative; overflow: hidden; background: #0f172a;">
+            ${item.thumbnail 
+              ? `<img src="${escapeHtml(item.thumbnail)}" referrerpolicy="no-referrer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="this.src='${iconUrl}'; this.style.objectFit='contain'; this.style.padding='6px'; this.style.opacity='0.6';">` 
+              : `<img src="${iconUrl}" style="width: 100%; height: 100%; object-fit: contain; padding: 6px; opacity: 0.6;">`}
+          </div>
+        `;
+          
+        return `
+          <div class="hist-item ${item.isSaved ? 'saved' : ''}">
+            ${thumb}
+            <div class="hist-body">
+              <div class="hist-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+              <div class="hist-meta"><span class="platform-tag">${escapeHtml(PLATFORMS[item.platform]?.label || item.platform)}</span><span>${timeAgo(item.timestamp)}</span></div>
+              <div class="hist-url" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</div>
+              <div class="hist-actions">
+                <button class="icon-btn reload" title="Load result" onclick="loadHistoryItem('${item.id}')">↻</button>
+                <button class="icon-btn delete" title="Delete" onclick="removeHistory('${item.id}')">🗑</button>
+                <button class="icon-btn save ${item.isSaved ? 'active' : ''}" title="${item.isSaved ? 'Saved' : 'Save (Prevent 3-day clear)'}" onclick="toggleSaveHistory('${item.id}')">
+                  ${item.isSaved ? '⭐' : '☆'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+  } else {
+    if (!activity.length) { content.innerHTML = `<div class="empty-drawer"><span class="emoji">📋</span>No activity yet.</div>`; return; }
+    content.innerHTML = `
+      <div class="drawer-toolbar"><span>${activity.length} events</span></div>
+      ${activity.map(a => `<div class="act-item"><div class="act-dot ${a.type}"></div><div class="act-body"><div class="act-msg">${escapeHtml(a.message)}</div><div class="act-time">${timeAgo(a.timestamp)}</div></div></div>`).join('')}
+    `;
+  }
+}
+
+document.querySelectorAll('.drawer-tab').forEach(tab => {
+  tab.addEventListener('click', () => { drawerTab = tab.dataset.tab; renderDrawer(); });
+});
+
+/* ============================================================
+   INPUT UX
+   ============================================================ */
+const urlInput = document.getElementById('urlInput');
+const clearBtn = document.getElementById('clearBtn');
+
+function updateClearBtn() { clearBtn.classList.toggle('visible', !!urlInput.value); }
+urlInput.addEventListener('input', () => {
+  updateClearBtn();
+  updateTabLock();
+  const detected = detectPlatform(urlInput.value.trim());
+  if (detected && detected !== currentPlatform) { currentPlatform = detected; renderTabs(); }
+});
+urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fetchMedia(); } });
+clearBtn.addEventListener('click', () => { 
+  urlInput.value = ''; 
+  updateClearBtn(); 
+  updateTabLock();
+  urlInput.focus(); 
+});
+document.getElementById('fetchBtn').addEventListener('click', fetchMedia);
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+function boot() {
+  loadData();
+  renderTabs();
+  urlInput.placeholder = PLATFORMS[currentPlatform].placeholder;
+  urlInput.focus();
+}
+boot();
+</script>
+</body>
+</html>
