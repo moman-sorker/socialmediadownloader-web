@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiMo — Video Downloader</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0b0f17">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MiMo">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Download videos and media from Facebook, Instagram, TikTok, Pinterest and YouTube.">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --surface: #121826;
+    --surface-2: #182033;
+    --border: #232d44;
+    --text: #e8edf6;
+    --text-2: #9aa7bf;
+    --text-3: #66738f;
+    --accent: #3b82f6;
+    --accent-2: #22d3ee;
+    --accent-ink: #ffffff;
+    --ok: #22c55e;
+    --err: #ef4444;
+    --warn: #f59e0b;
+    --radius: 14px;
+    --shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  [data-theme="light"] {
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --surface-2: #eef2f9;
+    --border: #dde4f0;
+    --text: #0f1729;
+    --text-2: #4b5875;
+    --text-3: #8592ad;
+    --shadow: 0 10px 30px rgba(20,30,60,.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(600px 300px at 15% -5%, rgba(59,130,246,.18), transparent 70%),
+      radial-gradient(500px 280px at 90% 0%, rgba(34,211,238,.12), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  img { max-width: 100%; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav {
+    max-width: 1080px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+  .brand img { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; }
+  .brand b { font-size: 18px; letter-spacing: -.3px; display: block; line-height: 1.1; }
+  .brand small { font-size: 11px; color: var(--text-3); letter-spacing: .6px; text-transform: uppercase; }
+  .nav-actions { display: flex; gap: 8px; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 13px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 13px; font-weight: 600;
+    transition: .15s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .pill {
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 11px; font-weight: 700; border-radius: 999px;
+    padding: 1px 7px; min-width: 20px; text-align: center;
+  }
+  .pill.hidden { display: none; }
+
+  /* ---------- Install popup (bottom sheet) ---------- */
+  .install-pop {
+    position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50;
+    width: calc(100% - 28px); max-width: 460px;
+    transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
+    transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .3s;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    padding: 14px;
+  }
+  .install-pop.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  .ip-row { display: flex; align-items: center; gap: 12px; }
+  .ip-icon { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; background: #ebedec; }
+  .ip-text { min-width: 0; flex: 1; }
+  .ip-text b { display: block; font-size: 14.5px; line-height: 1.25; }
+  .ip-text span { display: block; font-size: 12.5px; color: var(--text-2); line-height: 1.35; margin-top: 2px; }
+  .ip-x { background: none; border: 0; color: var(--text-3); font-size: 22px; line-height: 1; padding: 4px 6px; align-self: flex-start; }
+  .ip-btns { display: flex; gap: 8px; margin-top: 12px; }
+  .ip-btns button { flex: 1; min-height: 42px; border-radius: 11px; font-size: 14px; font-weight: 700; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
+  .ip-btns .ip-go { background: linear-gradient(135deg, var(--accent), #2563eb); border-color: transparent; color: #fff; }
+  .ip-steps { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+  .ip-steps b { color: var(--text); }
+
+  /* ---------- Layout ---------- */
+  main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 48px 20px 70px; }
+  .hero { text-align: center; margin-bottom: 30px; }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 46px); letter-spacing: -1.2px; line-height: 1.12; font-weight: 800;
+  }
+  .hero h1 span {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { color: var(--text-2); margin: 12px auto 0; max-width: 560px; font-size: 15px; }
+
+  /* ---------- Input ---------- */
+  .search {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 10px; display: flex; gap: 10px;
+    box-shadow: var(--shadow); max-width: 820px; margin: 0 auto;
+  }
+  .search:focus-within { border-color: var(--accent); }
+  .search-field { flex: 1; display: flex; align-items: center; gap: 10px; padding: 0 12px; min-width: 0; }
+  .search-field svg { color: var(--text-3); flex-shrink: 0; }
+  #urlInput {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+    color: var(--text); font-size: 15px; padding: 14px 0; font-family: inherit;
+  }
+  #urlInput::placeholder { color: var(--text-3); }
+  .icon-x {
+    background: var(--surface-2); border: 0; color: var(--text-2);
+    width: 26px; height: 26px; border-radius: 50%; font-size: 16px; line-height: 1; display: none;
+  }
+  .icon-x.show { display: block; }
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: 12px; padding: 0 26px; min-height: 48px;
+    background: linear-gradient(135deg, var(--accent), #2563eb);
+    color: var(--accent-ink); font-weight: 700; font-size: 14px;
+    transition: .15s; white-space: nowrap;
+  }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .6; cursor: wait; }
+  .spin {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+    animation: spin .7s linear infinite; display: none;
+  }
+  .btn-primary.loading .spin { display: inline-block; }
+  .btn-primary.loading .lbl { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Platform chips ---------- */
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px auto 0; max-width: 820px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-2); font-size: 13px; font-weight: 600; transition: .15s;
+  }
+  .chip img { width: 16px; height: 16px; object-fit: contain; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  .chip.active { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); border-color: var(--accent); color: var(--text); }
+  .auto-note { text-align: center; color: var(--text-3); font-size: 12px; margin-top: 10px; }
+
+  /* ---------- Result ---------- */
+  #resultArea { margin-top: 34px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .result { display: grid; grid-template-columns: 1fr; }
+  @media (max-width: 800px) { .result { grid-template-columns: 1fr; } }
+  .thumb {
+    position: relative; background: #000;
+    aspect-ratio: 16 / 9; max-height: 380px; width: 100%;
+    overflow: hidden; /* keeps the blur from spilling onto the title */
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* contain = the whole thumbnail is always visible, never cropped */
+  .thumb img { width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 1; }
+  /* blurred copy of the thumbnail fills the empty sides (vertical videos) */
+  .thumb-bg {
+    position: absolute; inset: -30px; z-index: 0;
+    background-size: cover; background-position: center;
+    filter: blur(26px) brightness(.55) saturate(1.2);
+  }
+  .thumb img.fallback { object-fit: contain; padding: 50px; opacity: .45; }
+  .thumb .dur {
+    position: absolute; right: 10px; bottom: 10px; z-index: 2;
+    background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 700;
+    padding: 3px 8px; border-radius: 6px;
+  }
+  .info { padding: 20px; min-width: 0; }
+  .info h2 { font-size: 18px; line-height: 1.35; margin-bottom: 8px; word-break: break-word; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .tag {
+    font-size: 12px; font-weight: 600; color: var(--text-2);
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .ftabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .ftab {
+    background: none; border: 0; border-bottom: 2px solid transparent;
+    color: var(--text-2); font-weight: 600; font-size: 13px; padding: 8px 12px; margin-bottom: -1px;
+  }
+  .ftab.active { color: var(--text); border-color: var(--accent); }
+  .ftab .n { color: var(--text-3); font-weight: 500; margin-left: 4px; }
+  .rows { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+  .rows::-webkit-scrollbar, .drawer-body::-webkit-scrollbar { width: 6px; }
+  .rows::-webkit-scrollbar-thumb, .drawer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 12px;
+  }
+  .row:hover { border-color: var(--accent); }
+  .row-main { min-width: 0; }
+  .row-q { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-s { font-size: 11.5px; color: var(--text-3); }
+  .row-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-sm {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 7px 11px; font-size: 12px; font-weight: 700;
+  }
+  .btn-sm:hover { border-color: var(--accent); }
+  .btn-sm.dl { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .btn-sm.dl:hover { filter: brightness(1.08); }
+  .empty { text-align: center; padding: 30px 10px; color: var(--text-3); font-size: 13px; }
+
+  .state {
+    text-align: center; padding: 40px 20px; border: 1px dashed var(--border);
+    border-radius: var(--radius); color: var(--text-2);
+  }
+  .state .big { font-size: 34px; margin-bottom: 8px; }
+  .state.err { border-color: color-mix(in srgb, var(--err) 55%, transparent); }
+  .state b { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* Skeleton */
+  .skel { background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: sk 1.3s ease infinite; border-radius: 8px; }
+  @keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+  /* ---------- Features ---------- */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 56px; }
+  .feat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .feat .ic { font-size: 22px; margin-bottom: 8px; }
+  .feat h3 { font-size: 14.5px; margin-bottom: 4px; }
+  .feat p { font-size: 13px; color: var(--text-2); }
+
+  /* ---------- Drawer (Downloads / History / Activity) ---------- */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 60; opacity: 0; pointer-events: none; transition: .25s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: 440px; max-width: 100vw; z-index: 70;
+    background: var(--surface); border-left: 1px solid var(--border);
+    transform: translateX(100%); transition: transform .3s cubic-bezier(.22,1,.36,1);
+    display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: none; }
+  .drawer-head { display: flex; align-items: center; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .dtabs { display: flex; gap: 4px; flex: 1; }
+  .dtab { background: none; border: 0; color: var(--text-2); font-weight: 600; font-size: 13px; padding: 8px 10px; border-radius: 8px; display: flex; gap: 6px; align-items: center; }
+  .dtab.active { background: var(--surface-2); color: var(--text); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 14px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-3); margin-bottom: 10px; font-weight: 600; }
+  .link-btn { background: none; border: 0; color: var(--err); font-size: 12px; font-weight: 700; }
+
+  .item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .item.saved { border-color: var(--warn); }
+  .item-top { display: flex; gap: 10px; }
+  .item-thumb { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: #000; flex-shrink: 0; }
+  .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .item-body { min-width: 0; flex: 1; }
+  .item-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s; }
+  .bar.done i { background: var(--ok); }
+  .bar.fail i { background: var(--err); }
+  .stat { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); margin-top: 5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .dot.success { background: var(--ok); } .dot.error { background: var(--err); } .dot.info { background: var(--accent); }
+
+  /* ---------- Toast / modal ---------- */
+  .toasts { position: fixed; top: 72px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast {
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    color: var(--text); padding: 11px 15px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    box-shadow: var(--shadow); max-width: 320px; animation: tin .25s ease;
+  }
+  .toast.success { border-left-color: var(--ok); } .toast.error { border-left-color: var(--err); }
+  @keyframes tin { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+  .modal { position: fixed; inset: 0; z-index: 90; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.6); }
+  .modal.open { display: flex; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; width: 100%; max-width: 560px; }
+  .modal-box h3 { margin-bottom: 8px; }
+  .modal-box p { color: var(--text-2); font-size: 13.5px; margin-bottom: 12px; }
+  .modal-box pre {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin-bottom: 14px;
+  }
+  .modal-btns { display: flex; justify-content: flex-end; gap: 8px; }
+
+  footer { position: relative; z-index: 1; border-top: 1px solid var(--border); text-align: center; padding: 22px 16px; font-size: 12.5px; color: var(--text-3); }
+  footer b { color: var(--text-2); }
+
+  @media (max-width: 560px) {
+    main { padding: 32px 14px 56px; }
+    .search { flex-direction: column; }
+    .btn-primary { min-height: 46px; }
+    .nav-actions .btn-ghost span.t { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a class="brand" href="/">
+      <img src="https://ik.imagekit.io/qkqtthays/MM-logo.png?updatedAt=1761059072594" alt="MiMo">
+      <div><b>MiMo</b><small>Video Downloader</small></div>
+    </a>
+    <div class="nav-actions">
+      <button class="btn-ghost" onclick="openDrawer('downloads')">⬇ <span class="t">Downloads</span> <span class="pill hidden" id="dlCount">0</span></button>
+      <button class="btn-ghost" onclick="openDrawer('history')">🕘 <span class="t">History</span></button>
+      <button class="btn-ghost" id="themeBtn" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Download videos from <span>social media</span></h1>
+    <p>Paste a link from Facebook, Instagram, TikTok, Pinterest or YouTube. Pick a quality and save it.</p>
+  </section>
+
+  <div class="search">
+    <div class="search-field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <input id="urlInput" type="url" placeholder="Paste video link here..." autocomplete="off" spellcheck="false">
+      <button class="icon-x" id="clearBtn" title="Clear">×</button>
+    </div>
+    <button class="btn-primary" id="fetchBtn"><span class="spin"></span><span class="lbl">Get Video</span></button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <div class="auto-note" id="autoNote">Platform is detected automatically from the link.</div>
+
+  <div id="resultArea"></div>
+
+  <!-- <section class="features">
+    <div class="feat"><div class="ic">🌐</div><h3>5 platforms</h3><p>Facebook, Instagram, TikTok, Pinterest and YouTube in one place.</p></div>
+    <div class="feat"><div class="ic">⏯</div><h3>Download manager</h3><p>Progress, speed, pause, resume and cancel for every download.</p></div>
+    <div class="feat"><div class="ic">🎚</div><h3>Choose quality</h3><p>Video, audio and extra formats are listed separately for each link.</p></div>
+    <div class="feat"><div class="ic">🔒</div><h3>No account needed</h3><p>History stays in your own browser. Nothing is uploaded to us.</p></div>
+  </section> -->
+</main>
+
+<footer>
+  Built by <b>M. Sarker</b> · MiMo Downloader. DRM-protected services (Netflix, Crunchyroll, etc.) are not supported. Only download content you have the right to save.
+</footer>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="dtabs">
+      <button class="dtab" data-tab="downloads">⬇ Downloads</button>
+      <button class="dtab" data-tab="history">🕘 History <span class="pill" id="histCount">0</span></button>
+      <button class="dtab" data-tab="activity">📋 Activity</button>
+    </div>
+    <button class="btn-ghost" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Stream (HLS / DASH) link</h3>
+    <p>This is a segmented stream, so a browser cannot save it as one file. Copy the command below and run it with <b>ffmpeg</b> on your computer, or open the link in a player like VLC.</p>
+    <pre id="modalCmd"></pre>
+    <div class="modal-btns">
+      <button class="btn-sm" id="modalCopyUrl">Copy link</button>
+      <button class="btn-sm dl" id="modalCopyCmd">Copy command</button>
+      <button class="btn-sm" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="install-pop" id="installPop" role="dialog" aria-label="Install app">
+  <div class="ip-row">
+    <img class="ip-icon" src="/icon-192.png" alt="">
+    <div class="ip-text">
+      <b>Install MiMo app</b>
+      <span id="ipDesc">Add to your home screen for quick access, full screen like a real app.</span>
+    </div>
+    <button class="ip-x" id="ipClose" aria-label="Close">×</button>
+  </div>
+  <div class="ip-steps" id="ipSteps" hidden></div>
+  <div class="ip-btns">
+    <button id="ipLater">Not now</button>
+    <button class="ip-go" id="ipInstall">Install</button>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API_BASE = window.location.origin;
+const ICON = {
+  facebook:  'https://ik.imagekit.io/qkqtthays/Facebook_icon.png',
+  instagram: 'https://ik.imagekit.io/qkqtthays/Instagram-icon.png',
+  pinterest: 'https://ik.imagekit.io/qkqtthays/Pinterest_icon.png',
+  tiktok:    'https://ik.imagekit.io/qkqtthays/TikTok_icon.png',
+  youtube:   'https://ik.imagekit.io/qkqtthays/Youtube_icon.png'
+};
+const PLATFORMS = {
+  facebook:  { label: 'Facebook',  endpoint: '/facebook',  placeholder: 'https://www.facebook.com/watch/?v=...' },
+  instagram: { label: 'Instagram', endpoint: '/Instagram', placeholder: 'https://www.instagram.com/reel/...' },
+  tiktok:    { label: 'TikTok',    endpoint: '/tiktok',    placeholder: 'https://www.tiktok.com/@user/video/...' },
+  pinterest: { label: 'Pinterest', endpoint: '/Pinterest', placeholder: 'https://www.pinterest.com/pin/...' },
+  youtube:   { label: 'YouTube',   endpoint: '/youtube',   placeholder: 'https://www.youtube.com/watch?v=...' }
+};
+const DRM_HOSTS = ['netflix.com','crunchyroll.com','primevideo.com','disneyplus.com','hotstar.com','hbomax.com','max.com','hulu.com','peacocktv.com','paramountplus.com','tv.apple.com'];
+
+let currentPlatform = 'facebook';
+let manualPlatform = false;
+let history = [];
+let activity = [];
+let downloads = [];            // download manager items
+let drawerTab = 'downloads';
+let isLoading = false;
+let current = null;            // { platform, url, norm }
+let currentTab = 'video';
+let modalFmt = null;
+
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDur(sec) {
+  if (!sec || isNaN(sec)) return '';
+  sec = Math.floor(sec);
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+}
+function fmtSize(b) {
+  if (!b && b !== 0) return '';
+  const u = ['B','KB','MB','GB']; let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+}
+function fmtEta(s) {
+  if (!isFinite(s) || s <= 0) return '';
+  if (s < 60) return Math.ceil(s) + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm ' + Math.ceil(s % 60) + 's';
+  return Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
+}
+function timeAgo(ts) {
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d / 60) + 'm ago';
+  if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+  return Math.floor(d / 86400) + 'd ago';
+}
+function safeName(s) { return String(s || 'video').replace(/[\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 80) || 'video'; }
+function hostOf(u) { try { return new URL(u).hostname.toLowerCase(); } catch (e) { return ''; } }
+function isDrm(u) { const h = hostOf(u); return DRM_HOSTS.some(d => h === d || h.endsWith('.' + d)); }
+function detectPlatform(u) {
+  if (/facebook\.com|fb\.watch|fb\.me/i.test(u)) return 'facebook';
+  if (/instagram\.com|instagr\.am/i.test(u)) return 'instagram';
+  if (/tiktok\.com/i.test(u)) return 'tiktok';
+  if (/pinterest\.[a-z.]+|pin\.it/i.test(u)) return 'pinterest';
+  if (/youtube\.com|youtu\.be/i.test(u)) return 'youtube';
+  return null;
+}
+function toast(msg, type = 'info', ms = 3000) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+function copyText(t) {
+  const done = () => toast('Copied', 'success', 1500);
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  else fallbackCopy(t, done);
+}
+function fallbackCopy(t, cb) {
+  const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select();
+  try { document.execCommand('copy'); cb(); } catch (e) { toast('Copy failed', 'error'); }
+  a.remove();
+}
+
+/* ============================================================
+   STORAGE (same key as before so old history keeps working)
+   ============================================================ */
+function loadData() {
+  try {
+    const raw = localStorage.getItem('mimo_db_v1');
+    if (raw) { const db = JSON.parse(raw); history = db.history || []; activity = db.activity || []; }
+  } catch (e) {}
+  const now = Date.now(), DAY = 86400000;
+  activity = activity.filter(a => now - a.timestamp < DAY);
+  history = history.filter(h => h.isSaved || now - h.timestamp < 3 * DAY);
+  saveData();
+}
+function saveData() {
+  try { localStorage.setItem('mimo_db_v1', JSON.stringify({ history, activity })); } catch (e) {}
+  $('histCount').textContent = history.length;
+}
+function addActivity(type, message) {
+  activity.unshift({ id: Date.now() + Math.random(), type, message, timestamp: Date.now() });
+  if (activity.length > 200) activity.length = 200;
+  saveData();
+  if ($('drawer').classList.contains('open') && drawerTab === 'activity') renderDrawer();
+}
+
+/* ============================================================
+   NORMALIZE API RESPONSES -> common shape
+   { title, author, duration, thumbnail, formats:[{quality, ext, url, kind, protocol, referer}] }
+   kind: video | audio | other
+   ============================================================ */
+function normalize(platform, d, pageUrl) {
+  const out = { title: '', author: '', duration: '', thumbnail: '', formats: [] };
+  const add = (f) => out.formats.push(Object.assign({ kind: 'video', protocol: '', referer: '' }, f));
+
+  if (platform === 'facebook') {
+    const v = d.video || {};
+    out.title = v.title || 'Facebook Video'; out.author = v.author; out.duration = v.duration; out.thumbnail = v.thumbnail;
+    if (v.hd && v.hd !== 'Not available') add({ quality: 'HD', ext: 'mp4', url: v.hd });
+    if (v.sd && v.sd !== 'Not available') add({ quality: 'SD', ext: 'mp4', url: v.sd });
+  } else if (platform === 'instagram') {
+    const it = Array.isArray(d) ? d[0] : d;
+    out.title = it.Title || 'Instagram Media'; out.author = it.Author; out.thumbnail = it.Thumbnail;
+    if (it['Download Link']) add({ quality: it.Quality || 'Original', ext: 'mp4', url: it['Download Link'] });
+  } else if (platform === 'tiktok') {
+    out.title = d.title || 'TikTok Video'; out.author = d.author; out.thumbnail = d.thumbnail;
+    (d.video || []).forEach(v => add({ quality: v.quality, ext: v.ext || 'mp4', url: v.url }));
+  } else if (platform === 'pinterest') {
+    out.title = 'Pinterest Media';
+    if (d.video) add({ quality: 'Video', ext: 'mp4', url: d.video });
+    if (d.photo) { add({ quality: 'Photo', ext: 'jpg', url: d.photo, kind: 'other' }); out.thumbnail = d.photo; }
+  } else {
+    // youtube list shape
+    out.title = d.title || 'Video'; out.author = d.author; out.thumbnail = d.thumbnail;
+    out.duration = typeof d.duration === 'number' ? fmtDur(d.duration) : (d.duration || '');
+    (d.video || []).forEach(f => {
+      const vc = (f.vcodec || '').toLowerCase(), ac = (f.acodec || '').toLowerCase();
+      let kind = 'video';
+      if (vc === 'none') kind = 'audio';
+      else if (platform === 'youtube') {
+        const q = String(f.quality || '').toLowerCase();
+        const std = ['2160','1440','1080','720','480','360','240','144'].some(r => q.includes(r)) && !q.includes('x');
+        if (!std) kind = 'other';
+      }
+      add({ quality: f.quality || 'Original', ext: f.ext || 'mp4', url: f.url, kind, protocol: f.protocol || '', referer: f.referer || '' });
+    });
+  }
+  if (platform === 'facebook' && out.duration && typeof out.duration !== 'string') out.duration = fmtDur(out.duration);
+  out.formats = out.formats.filter(f => f.url);
+  return out;
+}
+function isStream(f) { return f.ext === 'm3u8' || f.ext === 'mpd' || /m3u8|dash/i.test(f.protocol || ''); }
+
+/* ============================================================
+   PLATFORM CHIPS & INPUT
+   ============================================================ */
+function renderChips() {
+  $('chips').innerHTML = Object.entries(PLATFORMS).map(([k, p]) => `
+    <button class="chip ${k === currentPlatform ? 'active' : ''}" data-p="${k}">
+      <img src="${ICON[k]}" alt=""> ${esc(p.label)}
+    </button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(el => el.addEventListener('click', () => {
+    currentPlatform = el.dataset.p; manualPlatform = true;
+    $('urlInput').placeholder = PLATFORMS[currentPlatform].placeholder;
+    renderChips(); $('urlInput').focus();
+  }));
+}
+$('urlInput').addEventListener('input', () => {
+  const v = $('urlInput').value.trim();
+  $('clearBtn').classList.toggle('show', !!v);
+  if (v) {
+    const p = detectPlatform(v);
+    if (p && p !== currentPlatform) { currentPlatform = p; manualPlatform = false; renderChips(); }
+  }
+});
+$('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fetchMedia(); } });
+$('clearBtn').addEventListener('click', () => { $('urlInput').value = ''; $('clearBtn').classList.remove('show'); $('urlInput').focus(); });
+$('fetchBtn').addEventListener('click', fetchMedia);
+
+/* ============================================================
+   FETCH
+   ============================================================ */
+function showSkeleton() {
+  $('resultArea').innerHTML = `
+    <div class="card result">
+      <div class="skel" style="min-height:230px;border-radius:0"></div>
+      <div class="info">
+        <div class="skel" style="height:22px;width:70%;margin-bottom:12px"></div>
+        <div class="skel" style="height:16px;width:40%;margin-bottom:22px"></div>
+        <div class="skel" style="height:42px;margin-bottom:8px"></div>
+        <div class="skel" style="height:42px;margin-bottom:8px"></div>
+        <div class="skel" style="height:42px"></div>
+      </div>
+    </div>`;
+}
+function showError(msg) {
+  $('resultArea').innerHTML = `<div class="state err"><div class="big">⚠️</div><b>Could not fetch this link</b>${esc(msg || 'Unknown error')}</div>`;
+}
+async function fetchMedia() {
+  if (isLoading) return;
+  let url = $('urlInput').value.trim();
+  if (!url) { toast('Paste a link first', 'error'); $('urlInput').focus(); return; }
+  if (!/^https?:\/\//i.test(url)) { url = 'https://' + url; $('urlInput').value = url; }
+  if (isDrm(url)) {
+    showError('This service uses DRM protection, so its videos cannot be downloaded here.');
+    toast('DRM-protected service', 'error'); return;
+  }
+  if (!manualPlatform) {
+    const p = detectPlatform(url);
+    if (!p) {
+      showError('This link is not supported. Supported: Facebook, Instagram, TikTok, Pinterest, YouTube.');
+      toast('Unsupported link', 'error'); return;
+    }
+    currentPlatform = p;
+  }
+  renderChips();
+
+  const platform = currentPlatform, P = PLATFORMS[platform];
+  isLoading = true; $('fetchBtn').classList.add('loading'); $('fetchBtn').disabled = true;
+  showSkeleton();
+  addActivity('info', `Fetching from ${P.label}...`);
+
+  try {
+    const res = await fetch(`${API_BASE}${P.endpoint}?video=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error('Server error (HTTP ' + res.status + ')');
+    const data = await res.json();
+    if (data && data.status === 'error') throw new Error(data.message || 'API returned an error');
+    if (data && !data.status && data.message && !data['Download Link']) throw new Error(data.message);
+
+    const norm = normalize(platform, data, url);
+    if (!norm.formats.length) throw new Error('No downloadable formats were found for this link.');
+    current = { platform, url, norm };
+    currentTab = defaultTab(norm);
+    renderResult();
+    addToHistory(platform, url, norm);
+    addActivity('success', `Fetched ${P.label} media`);
+    toast('Link fetched', 'success', 1800);
+  } catch (e) {
+    const msg = e.message === 'Failed to fetch' ? 'Cannot reach the server. Check your connection.' : e.message;
+    showError(msg);
+    addActivity('error', `${P.label}: ${msg}`);
+  } finally {
+    isLoading = false; $('fetchBtn').classList.remove('loading'); $('fetchBtn').disabled = false;
+  }
+}
+
+/* ============================================================
+   RESULT RENDER
+   ============================================================ */
+function defaultTab(n) {
+  const c = k => n.formats.filter(f => f.kind === k).length;
+  return c('video') ? 'video' : (c('audio') ? 'audio' : 'other');
+}
+function renderResult() {
+  if (!current) return;
+  const { platform, norm } = current;
+  const counts = { video: 0, audio: 0, other: 0 };
+  norm.formats.forEach(f => counts[f.kind]++);
+  const fb = ICON[platform] || '';
+  const list = norm.formats.map((f, i) => ({ f, i })).filter(x => x.f.kind === currentTab);
+
+  const tabs = [['video', 'Video'], ['audio', 'Audio'], ['other', 'More']]
+    .filter(([k]) => counts[k] > 0 || k === currentTab)
+    .map(([k, l]) => `<button class="ftab ${k === currentTab ? 'active' : ''}" data-tab="${k}">${l}<span class="n">${counts[k]}</span></button>`).join('');
+
+  const rows = list.length ? list.map(({ f, i }) => {
+    const stream = isStream(f);
+    return `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-q">${esc(f.quality)}</div>
+          <div class="row-s">${esc(String(f.ext).toUpperCase())}${stream ? ' · stream' : ''}</div>
+        </div>
+        <div class="row-btns">
+          ${stream
+            ? `<button class="btn-sm" data-act="stream" data-i="${i}">Stream info</button>`
+            : `<button class="btn-sm" data-act="copy" data-i="${i}" title="Copy direct link">Copy</button>
+               <button class="btn-sm dl" data-act="dl" data-i="${i}">⬇ Download</button>`}
+        </div>
+      </div>`;
+  }).join('') : `<div class="empty">No formats in this category.</div>`;
+
+  $('resultArea').innerHTML = `
+    <div class="card result">
+      <div class="thumb">
+        ${norm.thumbnail ? `<div class="thumb-bg" data-bg="${esc(norm.thumbnail)}"></div>` : ''}
+        ${norm.thumbnail ? `<img src="${esc(norm.thumbnail)}" referrerpolicy="no-referrer" alt="" data-fb="${esc(fb)}">` : (fb ? `<img class="fallback" src="${esc(fb)}" alt="">` : '')}
+        ${norm.duration ? `<span class="dur">${esc(norm.duration)}</span>` : ''}
+      </div>
+      <div class="info">
+        <h2>${esc(norm.title)}</h2>
+        <div class="meta">
+          <span class="tag">${esc(PLATFORMS[platform].label)}</span>
+          ${norm.author ? `<span class="tag">👤 ${esc(norm.author)}</span>` : ''}
+          <span class="tag">🎞 ${norm.formats.length} format${norm.formats.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="ftabs">${tabs}</div>
+        <div class="rows">${rows}</div>
+      </div>
+    </div>`;
+
+  const bg = $('resultArea').querySelector('.thumb-bg');
+  if (bg) bg.style.backgroundImage = 'url("' + bg.dataset.bg.replace(/"/g, '%22') + '")';
+  const img = $('resultArea').querySelector('.thumb img[data-fb]');
+  if (img) img.addEventListener('error', () => {
+    if (bg) bg.remove();
+    if (img.dataset.fb) { img.src = img.dataset.fb; img.classList.add('fallback'); img.removeAttribute('data-fb'); }
+    else img.remove();
+  });
+}
+$('resultArea').addEventListener('click', e => {
+  const tab = e.target.closest('.ftab');
+  if (tab) { currentTab = tab.dataset.tab; renderResult(); return; }
+  const btn = e.target.closest('[data-act]');
+  if (!btn || !current) return;
+  const f = current.norm.formats[+btn.dataset.i];
+  if (!f) return;
+  if (btn.dataset.act === 'copy') copyText(f.url);
+  else if (btn.dataset.act === 'stream') openModal(f);
+  else if (btn.dataset.act === 'dl') enqueue(f, current.norm.title, current.url);
+});
+
+/* ============================================================
+   STREAM MODAL
+   ============================================================ */
+function openModal(f) {
+  modalFmt = f;
+  const ref = f.referer ? ` -headers "Referer: ${f.referer}\\r\\n"` : '';
+  $('modalCmd').textContent = `ffmpeg${ref} -i "${f.url}" -c copy "${safeName(current ? current.norm.title : 'video')}.mp4"`;
+  $('modal').classList.add('open');
+}
+$('modalClose').addEventListener('click', () => $('modal').classList.remove('open'));
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) $('modal').classList.remove('open'); });
+$('modalCopyUrl').addEventListener('click', () => modalFmt && copyText(modalFmt.url));
+$('modalCopyCmd').addEventListener('click', () => copyText($('modalCmd').textContent));
+
+/* ============================================================
+   DOWNLOAD MANAGER (progress, speed, pause, resume, cancel)
+   Strategy: direct fetch first; if blocked by CORS, retry through /proxy.
+   Resume uses HTTP Range from the bytes already received.
+   ============================================================ */
+function proxyUrl(d) {
+  return `${API_BASE}/proxy?url=${encodeURIComponent(d.src)}&filename=${encodeURIComponent(d.filename)}` +
+         (d.referer ? `&referer=${encodeURIComponent(d.referer)}` : '');
+}
+function enqueue(f, title, pageUrl) {
+  const d = {
+    id: 'd' + Date.now() + Math.random().toString(36).slice(2, 6),
+    title: safeName(title), filename: safeName(title) + '.' + (f.ext || 'mp4'),
+    src: f.url, referer: f.referer || pageUrl, quality: f.quality,
+    thumb: current ? current.norm.thumbnail : '',
+    status: 'queued', received: 0, total: 0, chunks: [], speed: 0,
+    mode: 'direct', ctrl: null, err: '', _t: 0, _b: 0
+  };
+  downloads.unshift(d);
+  updateDlCount();
+  toast('Added to downloads', 'success', 1500);
+  addActivity('info', 'Download started: ' + d.filename);
+  runDownload(d);
+}
+async function runDownload(d) {
+  d.status = 'downloading'; d.err = ''; d.ctrl = new AbortController();
+  d._t = performance.now(); d._b = d.received;
+  refreshDownloads();
+  try {
+    let res;
+    const headers = d.received ? { Range: 'bytes=' + d.received + '-' } : {};
+    try {
+      if (d.mode === 'proxy') throw new Error('use-proxy');
+      res = await fetch(d.src, { headers, signal: d.ctrl.signal, referrerPolicy: 'no-referrer' });
+      if (!res.ok && res.status !== 206) throw new Error('direct-failed');
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      d.mode = 'proxy';
+      res = await fetch(proxyUrl(d), { headers, signal: d.ctrl.signal });
+    }
+    if (!res.ok && res.status !== 206) throw new Error('Server refused the download (HTTP ' + res.status + ')');
+
+    // If we asked for a range but server ignored it, restart from zero
+    if (d.received && res.status === 200) { d.chunks = []; d.received = 0; d._b = 0; }
+    const len = +res.headers.get('Content-Length') || 0;
+    if (res.status === 206) {
+      const cr = res.headers.get('Content-Range') || '';
+      const m = cr.match(/\/(\d+)$/);
+      d.total = m ? +m[1] : d.received + len;
+    } else d.total = len;
+
+    const reader = res.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      d.chunks.push(value); d.received += value.length;
+      const now = performance.now();
+      if (now - d._t > 600) {
+        d.speed = (d.received - d._b) / ((now - d._t) / 1000);
+        d._t = now; d._b = d.received;
+        refreshDownloads();
+      }
+    }
+    saveBlob(d);
+    d.status = 'done'; d.speed = 0;
+    toast('Download complete', 'success');
+    addActivity('success', 'Downloaded: ' + d.filename);
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      if (d.status !== 'paused') { d.status = 'canceled'; d.chunks = []; }
+    } else {
+      d.status = 'failed'; d.err = e.message || 'Download failed';
+      addActivity('error', 'Failed: ' + d.filename);
+      toast('Download failed. Try "Open" to save via browser.', 'error', 4000);
+    }
+  }
+  refreshDownloads();
+}
+function saveBlob(d) {
+  const blob = new Blob(d.chunks);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = d.filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  d.chunks = [];
+}
+function pauseDl(d) { if (d.status === 'downloading') { d.status = 'paused'; d.ctrl.abort(); d.speed = 0; refreshDownloads(); } }
+function resumeDl(d) { if (d.status === 'paused' || d.status === 'failed') runDownload(d); }
+function cancelDl(d) {
+  if (d.status === 'downloading') { d.ctrl.abort(); }
+  d.status = 'canceled'; d.chunks = []; refreshDownloads();
+}
+function removeDl(d) { downloads = downloads.filter(x => x !== d); updateDlCount(); refreshDownloads(); }
+function updateDlCount() {
+  const n = downloads.filter(d => d.status === 'downloading' || d.status === 'queued' || d.status === 'paused').length;
+  $('dlCount').textContent = n; $('dlCount').classList.toggle('hidden', n === 0);
+}
+function refreshDownloads() {
+  updateDlCount();
+  if ($('drawer').classList.contains('open') && drawerTab === 'downloads') renderDrawer();
+}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+function addToHistory(platform, url, norm) {
+  if (history[0] && history[0].url === url && history[0].platform === platform) return;
+  history.unshift({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    platform, url, title: norm.title, thumbnail: norm.thumbnail || '',
+    timestamp: Date.now(), isSaved: false, norm
+  });
+  if (history.length > 100) history.length = 100;
+  saveData();
+}
+function loadHistoryItem(id) {
+  const h = history.find(x => x.id === id);
+  if (!h) return;
+  if (!h.norm) { // old format entries from the previous UI: re-fetch instead
+    $('urlInput').value = h.url; currentPlatform = h.platform; manualPlatform = true; renderChips();
+    closeDrawer(); fetchMedia(); return;
+  }
+  currentPlatform = h.platform; manualPlatform = true; renderChips();
+  $('urlInput').value = h.url; $('clearBtn').classList.add('show');
+  current = { platform: h.platform, url: h.url, norm: h.norm };
+  currentTab = defaultTab(h.norm);
+  renderResult(); closeDrawer(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================================================
+   DRAWER
+   ============================================================ */
+function openDrawer(tab) { if (tab) drawerTab = tab; $('drawer').classList.add('open'); $('overlay').classList.add('open'); renderDrawer(); }
+function closeDrawer() { $('drawer').classList.remove('open'); $('overlay').classList.remove('open'); }
+$('overlay').addEventListener('click', closeDrawer);
+$('drawerClose').addEventListener('click', closeDrawer);
+document.querySelectorAll('.dtab').forEach(t => t.addEventListener('click', () => { drawerTab = t.dataset.tab; renderDrawer(); }));
+
+function thumbHtml(src, platform) {
+  const fb = ICON[platform] || '';
+  return src ? `<img src="${esc(src)}" referrerpolicy="no-referrer" alt="" data-fb="${esc(fb)}">` : (fb ? `<img src="${esc(fb)}" alt="" style="object-fit:contain;padding:8px;opacity:.6">` : '');
+}
+function renderDrawer() {
+  document.querySelectorAll('.dtab').forEach(t => t.classList.toggle('active', t.dataset.tab === drawerTab));
+  const body = $('drawerBody');
+
+  if (drawerTab === 'downloads') {
+    if (!downloads.length) { body.innerHTML = `<div class="empty">No downloads yet.<br>Press Download on any format and it will show up here.</div>`; return; }
+    body.innerHTML = `<div class="toolbar"><span>${downloads.length} item${downloads.length !== 1 ? 's' : ''}</span><button class="link-btn" data-act="clear-dl">Clear finished</button></div>` +
+      downloads.map(d => {
+        const pct = d.total ? Math.min(100, d.received / d.total * 100) : (d.status === 'done' ? 100 : 0);
+        const cls = d.status === 'done' ? 'done' : (d.status === 'failed' ? 'fail' : '');
+        const eta = d.speed && d.total ? fmtEta((d.total - d.received) / d.speed) : '';
+        const label = { queued: 'Queued', downloading: 'Downloading', paused: 'Paused', done: 'Completed', failed: 'Failed', canceled: 'Canceled' }[d.status];
+        const proxied = d.mode === 'proxy' ? ' · via server' : '';
+        return `
+        <div class="item" data-id="${d.id}">
+          <div class="item-top">
+            <div class="item-thumb">${thumbHtml(d.thumb, '')}</div>
+            <div class="item-body">
+              <div class="item-title" title="${esc(d.filename)}">${esc(d.filename)}</div>
+              <div class="item-sub">${esc(d.quality || '')}${proxied}</div>
+            </div>
+          </div>
+          <div class="bar ${cls}"><i style="width:${pct}%"></i></div>
+          <div class="stat">
+            <span>${label}${d.err ? ' · ' + esc(d.err) : ''}</span>
+            <span>${fmtSize(d.received)}${d.total ? ' / ' + fmtSize(d.total) : ''}${d.speed ? ' · ' + fmtSize(d.speed) + '/s' : ''}${eta ? ' · ' + eta : ''}</span>
+          </div>
+          <div class="item-act">
+            ${d.status === 'downloading' ? `<button class="btn-sm" data-act="pause">⏸ Pause</button>` : ''}
+            ${d.status === 'paused' || d.status === 'failed' ? `<button class="btn-sm dl" data-act="resume">▶ Resume</button>` : ''}
+            ${d.status === 'downloading' || d.status === 'paused' ? `<button class="btn-sm" data-act="cancel">✕ Cancel</button>` : ''}
+            ${d.status === 'failed' || d.status === 'canceled' || d.status === 'done' ? `<button class="btn-sm" data-act="remove">Remove</button>` : ''}
+            ${d.status === 'failed' ? `<a class="btn-sm" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(proxyUrl(d))}">Open</a>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+  } else if (drawerTab === 'history') {
+    if (!history.length) { body.innerHTML = `<div class="empty">Your history will appear here.</div>`; return; }
+    body.innerHTML = `<div class="toolbar"><span>${history.length} item${history.length !== 1 ? 's' : ''}</span><button class="link-btn" data-act="clear-hist">Clear all</button></div>` +
+      history.map(h => `
+        <div class="item ${h.isSaved ? 'saved' : ''}" data-id="${esc(h.id)}">
+          <div class="item-top">
+            <div class="item-thumb">${thumbHtml(h.thumbnail, h.platform)}</div>
+            <div class="item-body">
+              <div class="item-title" title="${esc(h.title)}">${esc(h.title)}</div>
+              <div class="item-sub">${esc(PLATFORMS[h.platform] ? PLATFORMS[h.platform].label : h.platform)} · ${timeAgo(h.timestamp)}</div>
+              <div class="item-sub" title="${esc(h.url)}">${esc(h.url)}</div>
+            </div>
+          </div>
+          <div class="item-act">
+            <button class="btn-sm" data-act="load">↻ Open</button>
+            <button class="btn-sm" data-act="star">${h.isSaved ? '⭐ Saved' : '☆ Save'}</button>
+            <button class="btn-sm" data-act="del">🗑</button>
+          </div>
+        </div>`).join('');
+  } else {
+    if (!activity.length) { body.innerHTML = `<div class="empty">No activity yet.</div>`; return; }
+    body.innerHTML = `<div class="toolbar"><span>${activity.length} events (24h)</span></div>` +
+      activity.map(a => `
+        <div class="item" style="display:flex;gap:10px">
+          <div class="dot ${esc(a.type)}"></div>
+          <div><div class="item-title" style="white-space:normal">${esc(a.message)}</div><div class="item-sub">${timeAgo(a.timestamp)}</div></div>
+        </div>`).join('');
+  }
+  body.querySelectorAll('img[data-fb]').forEach(img => img.addEventListener('error', () => {
+    if (img.dataset.fb) { img.src = img.dataset.fb; img.style.objectFit = 'contain'; img.style.padding = '8px'; img.removeAttribute('data-fb'); }
+    else img.remove();
+  }));
+}
+$('drawerBody').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  const itemEl = btn.closest('.item');
+  const id = itemEl ? itemEl.dataset.id : null;
+
+  if (drawerTab === 'downloads') {
+    if (act === 'clear-dl') { downloads = downloads.filter(d => d.status === 'downloading' || d.status === 'paused' || d.status === 'queued'); refreshDownloads(); return; }
+    const d = downloads.find(x => x.id === id); if (!d) return;
+    if (act === 'pause') pauseDl(d); else if (act === 'resume') resumeDl(d);
+    else if (act === 'cancel') cancelDl(d); else if (act === 'remove') removeDl(d);
+  } else if (drawerTab === 'history') {
+    if (act === 'clear-hist') { if (history.length && confirm('Clear all history?')) { history = []; saveData(); renderDrawer(); } return; }
+    const h = history.find(x => x.id === id); if (!h) return;
+    if (act === 'load') loadHistoryItem(h.id);
+    else if (act === 'star') { h.isSaved = !h.isSaved; saveData(); renderDrawer(); toast(h.isSaved ? 'Saved permanently' : 'Will expire in 3 days', 'info', 1800); }
+    else if (act === 'del') { history = history.filter(x => x !== h); saveData(); renderDrawer(); }
+  }
+});
+window.addEventListener('beforeunload', e => {
+  if (downloads.some(d => d.status === 'downloading')) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ============================================================
+   THEME + BOOT
+   ============================================================ */
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  $('themeBtn').textContent = t === 'dark' ? '🌙' : '☀️';
+  try { localStorage.setItem('mimo_theme', t); } catch (e) {}
+}
+$('themeBtn').addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); $('modal').classList.remove('open'); } });
+
+/* ============================================================
+   PWA: service worker + install button
+   ============================================================ */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+let deferredInstall = null;
+const IP_KEY = 'mimo_install_dismissed';
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+function ipDismissedRecently() {
+  try { const t = +localStorage.getItem(IP_KEY); return t && Date.now() - t < 7 * 86400000; } catch (e) { return false; }
+}
+function ipRemember() { try { localStorage.setItem(IP_KEY, String(Date.now())); } catch (e) {} }
+function showInstallPop(delay = 2500) {
+  if (isStandalone() || ipDismissedRecently()) return;
+  setTimeout(() => $('installPop').classList.add('show'), delay);
+}
+function hideInstallPop(remember) { $('installPop').classList.remove('show'); if (remember) ipRemember(); }
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e; showInstallPop();
+});
+$('ipInstall').addEventListener('click', async () => {
+  if (deferredInstall) {
+    hideInstallPop(false);
+    deferredInstall.prompt();
+    await deferredInstall.userChoice.catch(() => {});
+    deferredInstall = null;
+  } else if (isIOS()) {            // iPhone has no install API: show the manual steps
+    $('ipSteps').hidden = false;
+    $('ipSteps').innerHTML = 'Tap the <b>Share</b> button in Safari, then choose <b>Add to Home Screen</b>.';
+    $('ipInstall').style.display = 'none';
+  }
+});
+$('ipLater').addEventListener('click', () => hideInstallPop(true));
+$('ipClose').addEventListener('click', () => hideInstallPop(true));
+window.addEventListener('appinstalled', () => { hideInstallPop(false); toast('App installed', 'success'); });
+// iPhone Safari never fires beforeinstallprompt, so show the popup ourselves
+if (isIOS() && !isStandalone()) showInstallPop(3000);
+
+(function boot() {
+  let t = 'dark';
+  try { t = localStorage.getItem('mimo_theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch (e) {}
+  applyTheme(t);
+  loadData();
+  renderChips();
+  $('urlInput').placeholder = PLATFORMS[currentPlatform].placeholder;
+  $('urlInput').focus();
+})();
+</script>
+</body>
+</html>
